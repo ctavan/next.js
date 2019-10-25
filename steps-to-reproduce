@@ -1,0 +1,86 @@
+# MacOS 10.14.6 (18G103)
+#
+node --version
+# v12.12.0
+
+# Steps to reproduce:
+git clone https://github.com/zeit/next.js.git
+cd next.js
+
+# Check out the last working commit:
+git checkout 2c7b4d8a
+
+# Build local next module:
+yarn
+
+# Demonstrate the issue using the included example:
+cd examples/with-firebase-authentication
+
+# Use local next module:
+sed -i '' -e "s#\"next\": \"latest\"#\"next\": \"file:$(pwd)/../../packages/next\"#" package.json
+
+# Upgrade firebase modules because the ones defined in package.json won't build
+# with node 12:
+yarn add firebase@7.2.1 firebase-admin@8.6.1
+
+# Duplicate the single page from the example to provoke a parallel build. The
+# issue only appears when multiple pages are built in parallel:
+cp pages/index.js pages/parallel.js
+
+# Ensure there's no local installation of next, then force install the example
+# and try to build it:
+rm -rf node_modules/next && yarn install --force && yarn build
+
+# yarn run v1.19.1
+# warning package.json: No license field
+# $ next build
+# Creating an optimized production build ...
+#
+# Compiled successfully.
+#
+# Page            Size     Files  Packages
+# ┌ σ /           3.23 kB      1         7
+# ├   /_app       1.83 kB      0         7
+# ├   /_document
+# ├   /_error     7.71 kB      0         7
+# └ σ /parallel   3.24 kB      1         7
+#
+# σ  (Server)       page will be server rendered (i.e. getInitialProps)
+# ⚡  (Static File)  page was prerendered as static HTML
+#
+# ✨  Done in 19.53s.
+
+# Now back to the repository root and checkout the first broken commit:
+cd ../../
+git checkout f81b6d5
+
+# Build the local next module again:
+yarn
+
+# Try to build the example again:
+cd examples/with-firebase-authentication
+rm -rf node_modules/next && yarn install --force && yarn build
+
+# yarn run v1.19.1
+# warning package.json: No license field
+# $ next build
+# Creating an optimized production build ...
+#
+# Compiled successfully.
+#
+# > Build error occurred
+# Error: Failed to load /Users/*REDACTED*/next.js/examples/with-firebase-authentication/node_modules/grpc/src/node/extension_binary/node-v72-darwin-x64-unknown/grpc_node.node. Module did not self-register.
+#     at Object.Module._extensions..node (internal/modules/cjs/loader.js:1003:18)
+#     at Module.load (internal/modules/cjs/loader.js:812:32)
+#     at Function.Module._load (internal/modules/cjs/loader.js:724:14)
+#     at Module.require (internal/modules/cjs/loader.js:849:19)
+#     at require (internal/modules/cjs/helpers.js:74:18)
+#     at Object.<anonymous> (/Users/*REDACTED*/next.js/examples/with-firebase-authentication/node_modules/grpc/src/grpc_extension.js:32:13)
+#     at Module._compile (internal/modules/cjs/loader.js:956:30)
+#     at Object.Module._extensions..js (internal/modules/cjs/loader.js:973:10)
+#     at Module.load (internal/modules/cjs/loader.js:812:32)
+#     at Function.Module._load (internal/modules/cjs/loader.js:724:14) {
+#   type: 'Error'
+# }
+# error Command failed with exit code 1.
+# info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
